@@ -2,12 +2,35 @@ import os
 import sys
 import time
 import argparse
+import configparser
 from datetime import date, datetime, timedelta
 from collections import defaultdict
 from progressbar import ProgressBar, Timer
 
-track_file = os.path.expanduser("~/.timetrack")
+track_file = os.path.expanduser("~/.timetrack_log")
 working_hours = 10
+
+
+def load_config():
+    """Load config variables for timetrack"""
+    global working_hours, track_file
+
+    config = configparser.ConfigParser()
+    config['timetrack'] = {"track_file": os.path.expanduser(
+                                             "~/.timetrack_log"),
+                           "working_hours": 10}
+
+    confpath = os.path.expanduser("~/.timetrack")
+
+    if not os.path.exists(confpath):
+        print("Config file does not exist. Creating default one")
+        with open(confpath, "w") as f:
+            config.write(f)
+    else:
+        config.read(confpath)
+
+    working_hours = config['timetrack']['working_hours']
+    track_file = config['timetrack']['track_file']
 
 
 def delete(args):
@@ -27,6 +50,7 @@ def delete(args):
             f.write(line)
 
     list_today(args)
+
 
 def add(args):
     """Add a chunk of time to the report."""
@@ -222,6 +246,10 @@ def report(args, echo=True):
 
 def main():
     """Main method parses arguments and runs subroutines."""
+    #first thing we do is load/init config
+    load_config()
+
+    #prepare argparser
     top_argparser = argparse.ArgumentParser(
         description="Track what you're doing")
 
@@ -234,6 +262,7 @@ def main():
 
     top_args = top_argparser.parse_args(sys.argv[1:2])
 
+    #each action has their own sub-args
     if top_args.action == "add":
 
         add_argparse = argparse.ArgumentParser(description="Add some time")
