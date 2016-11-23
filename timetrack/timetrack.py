@@ -143,12 +143,16 @@ def human_time(minutes):
     return "{}h{}m".format(hours, mins)
 
 
+def day_spent(records):
+    """Return the total time spent for given day"""
+    return sum([int(record[2]) for record in records])
+
 def day_remainder(records):
     """Calculate how much of your day is unspent"""
     global working_hours
 
     day_minutes = int(working_hours) * 60
-    total_spent = sum([int(record[2]) for record in records])
+    total_spent = day_spent(records)
 
     return day_minutes - total_spent
 
@@ -215,6 +219,8 @@ def list_logs(args):
 
     print("-----------")
 
+    print("Time spent today: {}".format(
+        human_time(day_spent(records[date.today()]))))
     print("Remaining time today: {}".format(
         human_time(day_remainder(records[date.today()]))))
 
