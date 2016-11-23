@@ -1,9 +1,10 @@
 import os
 import sys
-import csv
+import time
 import argparse
 from datetime import date, datetime, timedelta
 from collections import defaultdict
+from progressbar import ProgressBar, Timer
 
 track_file = os.path.expanduser("~/.timetrack")
 working_hours = 10
@@ -32,9 +33,13 @@ def add(args):
     global track_file
 
     if args.time == "live":
-        time = live_time()
+        time = int(live_time(args))
     else:
         time = parse_time(args.time)
+
+    if time < 1:
+        print("You must spend at least a minute on a task to record it.")
+        return
 
     if(args.when == "now"):
         day = date.today()
@@ -76,8 +81,31 @@ def parse_time(time):
 
     return total
 
-def live_time():
-    """Not yet implemented"""
+
+def live_time(args):
+    """Run a timer actively in the window"""
+    start = datetime.now()
+
+    print("Starting timer, press Ctrl + C at any time to end recording...")
+
+    running = True
+
+    widgets = ['Project:{} '.format(args.project), Timer(), '']
+
+    with ProgressBar(widgets=widgets) as pbar:
+        while(running):
+            try:
+                time.sleep(1)
+                pbar.update(0)
+            except:
+                running = False
+
+    end = datetime.now()
+
+    diff = end - start
+
+    return (int(diff.total_seconds()) / 60)
+
 
 def human_time(minutes):
     """Returns x hours y minutes for an input of minutes"""
