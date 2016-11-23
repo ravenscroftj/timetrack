@@ -49,7 +49,9 @@ def delete(args):
         for line in all_data:
             f.write(line)
 
-    list_today(args)
+    args.week = False
+    args.month = False
+    list_logs(args)
 
 
 def add(args):
@@ -145,7 +147,7 @@ def day_remainder(records):
     """Calculate how much of your day is unspent"""
     global working_hours
 
-    day_minutes = working_hours * 60
+    day_minutes = int(working_hours) * 60
     total_spent = sum([int(record[2]) for record in records])
 
     return day_minutes - total_spent
@@ -299,6 +301,9 @@ def main():
         ls_argparse.add_argument("-w", "--week", dest="week",
                                  action="store_true",
                                  help="List logs for this week")
+        ls_argparse.add_argument("-m", "--month", dest="month",
+                                  action="store_true",
+                                  help="List logs for this month")
 
         args = ls_argparse.parse_args(sys.argv[2:])
 

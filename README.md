@@ -23,6 +23,9 @@ path.
 timetrack loads its configuration from a file in your user directory called
 ~/.timetrack. Here you can define the following:
 
+  * track_file: path to the actual file you want to use to log to.
+  * working_hours: number of hours you work per day - used to calculate remaining
+     time in the list command
 
 ## Usage
 
@@ -37,6 +40,11 @@ You can add time to a project by running
 ````
 timetrack  add <project_name> 1h30m "some comment on what you did."
 ````
+
+Project names can be arbitrary and are not validated. Every time you run `add`
+with the same project name, this information can be used to tally up your total
+time spent on that project using the report command (explained below). Project
+names are case sensitive.
 
 timetrack uses XhYm to report that you spent X hours and Y minutes on a project.
 
@@ -84,4 +92,65 @@ date format.
 
 To see what you've logged so far  you can use the `timetrack ls` command. By
 default this will show you all the work you've logged so far today and guess at
-how many hours you have left of useful time
+how many hours you have left of useful time.
+
+An example output can be seen here:
+
+````
+$ timetrack ls
+
+2016-11-23
+---------
+1) 1h30m on timetrack: initial write of timetrack to keep track of stuff I do
+2) 1h0m on PhD: swatting up on cluster queue systems
+3) 0h15m on PhD: raise bug on cluster system
+5) 1h0m on timetrack: implemented inserting old dates and listing your week
+6) 0h34m on timetrack: working on timetrack
+-----------
+Remaining time today: 5h41m
+
+````
+
+If you want to see your timetrack log for the previous week or even month then
+you can call `timetrack ls -w` or `timetrack ls -m` respectively.
+
+
+### Per-project report
+
+This view allows you to see how much time you have spent on each project. You
+can see this summary for the current week or month by using `-w` or `-m` flags
+respectively.
+
+An example call and output can be seen below:
+
+````
+> timetrack report -w  
+
+Project Breakdown: 2016-11-16 to 2016-11-23
+----------
+PhD: 4h15m
+timetrack: 3h4m
+spam_eating: 1h15m
+````
+
+### Removing erroneous records
+
+If you have recorded some time that was incorrect, it is simple enough to remove.
+You will notice that in the `timetrack ls` output each log has a number next to
+it. This is the unique id of that entry. To remove a log entry simply run
+
+````
+timetrack remove <id>
+````
+
+The entry will be wiped from the system and the current day's logs will be shown
+on screen.
+
+## License
+This project is under the MIT open source license. Please see the LICENSE file
+for the specifics.
+
+## Contributing
+
+If you would like to contribute to this project, simply clone it, make your
+adjustments and raise a merge request.
