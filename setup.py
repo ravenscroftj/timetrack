@@ -6,7 +6,8 @@ setup(
     packages = find_packages(),
 
     #install requirements
-    install_requires = ['progressbar2'],
+    install_requires = ['progressbar2',
+                        'matplotlib'],
 
     entry_points = {"console_scripts" : [
         'timetrack = timetrack.timetrack:main',
