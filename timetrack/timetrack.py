@@ -275,6 +275,7 @@ def main():
                                choices=["ls",
                                         "track",
                                         "report",
+                                        "report_graph",
                                         "remove",
                                         "add"])
 
@@ -311,6 +312,20 @@ def main():
         args = rpt_argparse.parse_args(sys.argv[2:])
 
         report(args)
+        
+    if top_args.action == "report_graph":
+        rpt_argparse = argparse.ArgumentParser(description="Generate graphical report")
+        rpt_argparse.add_argument("-w", "--week", dest="week",
+                                  action="store_true",
+                                  help="List logs for this week")
+
+        rpt_argparse.add_argument("-m", "--month", dest="month",
+                                  action="store_true",
+                                  help="List logs for this month")
+
+        args = rpt_argparse.parse_args(sys.argv[2:])
+
+        report_graph(args)
 
     if top_args.action == "ls":
         ls_argparse = argparse.ArgumentParser(description="List time logs")
