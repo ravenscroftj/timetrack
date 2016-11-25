@@ -8,6 +8,7 @@ from datetime import date, datetime, timedelta
 from collections import defaultdict
 from progressbar import ProgressBar, Timer
 from matplotlib import pyplot
+from collections import OrderedDict
 
 track_file = os.path.expanduser("~/.timetrack_log")
 working_hours = 10
@@ -252,27 +253,36 @@ def report(args, echo=True):
     start_date, end_date = parse_time_args(args)
     project_report(start_date, end_date, echo)
 
-def report_graph(args):
+def report_graph(args, echo=False):
     """Generate a bar chart report for the given timeframe."""
     start_date, end_date = parse_time_args(args)
-    report_data = project_report(start_date, end_date, False)
+    report_data = OrderedDict(sorted(project_report(start_date, end_date, echo).iteritems()))
     
     fig = pyplot.figure()
-    fig.suptitle("Project Breakdown: {} to {}".format(
-            start_date.strftime("%Y-%m-%d"),
-            end_date.strftime("%Y-%m-%d")),
-            fontsize=14, fontweight='bold')
+    titleString = "Project Breakdown: {}".format(start_date.strftime("%Y-%m-%d"))
+    
+    if start_date != end_date:
+        titleString+=" to {}".format(end_date.strftime("%Y-%m-%d"))
+        
+    fig.suptitle(titleString, fontsize=14, fontweight='bold')
             
     ax = fig.add_subplot(1,1,1)
     fig.subplots_adjust(top=0.85)
-    ax.set_xlabel('Project')
-    ax.set_ylabel('Hours')
+    num_reports = len(report_data)
+    
+    my_colors = ['c','m','y','r', 'g', 'b']*(num_reports/6)
     
     for key in report_data.iterkeys():
         report_data[key] = report_data[key]/60
-    
-    pyplot.bar(range(len(report_data)), report_data.values(), align='center')
-    pyplot.xticks(range(len(report_data)), list(report_data.keys()))
+        
+    if args.pie:
+        pyplot.axis('equal')
+        pyplot.pie(report_data.values(), labels=list(report_data.keys()), autopct='%1.1f%%', colors=my_colors, startangle=90)
+    else:
+        ax.set_xlabel('Project')
+        ax.set_ylabel('Hours')
+        pyplot.bar(range(num_reports), report_data.values(), align='center', color=my_colors)
+        pyplot.xticks(range(num_reports), list(report_data.keys()))
     
     pyplot.show()
 
@@ -336,6 +346,10 @@ def main():
         rpt_argparse.add_argument("-m", "--month", dest="month",
                                   action="store_true",
                                   help="List logs for this month")
+                                  
+        rpt_argparse.add_argument("-p", "--pie", dest="pie",
+                                  action="store_true",
+                                  help="Display a pie cart instead of a bar chart")
 
         args = rpt_argparse.parse_args(sys.argv[2:])
 
