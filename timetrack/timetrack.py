@@ -257,10 +257,21 @@ def report_graph(args):
     start_date, end_date = parse_time_args(args)
     report_data = project_report(start_date, end_date, False)
     
-    pyplot.bar(range(len(report_data)), report_data.values(), align='center')
-    pyplot.xticks(range(len(report_data)), list(reportdata.keys()))
+    fig = pyplot.figure()
+    fig.suptitle("Project Breakdown: {} to {}".format(
+            start_date.strftime("%Y-%m-%d"),
+            finish_date.strftime("%Y-%m-%d")),
+            fontsize=14, fontweight=bold)
+            
+    ax = fig.add_subplot(1,1,1)
+    fig.subplots_adjust(top=0.85)
+    ax.set_xlabel('Project')
+    ax.set_ylabel('Hours')
     
-    pyplot.show
+    pyplot.bar(range(len(report_data)), report_data.values(), align='center')
+    pyplot.xticks(range(len(report_data)), list(report_data.keys()))
+    
+    pyplot.show()
 
 def main():
     """Main method parses arguments and runs subroutines."""
