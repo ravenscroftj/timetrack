@@ -260,7 +260,7 @@ def report_graph(args):
     fig = pyplot.figure()
     fig.suptitle("Project Breakdown: {} to {}".format(
             start_date.strftime("%Y-%m-%d"),
-            finish_date.strftime("%Y-%m-%d")),
+            end_date.strftime("%Y-%m-%d")),
             fontsize=14, fontweight=bold)
             
     ax = fig.add_subplot(1,1,1)
