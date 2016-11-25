@@ -270,7 +270,7 @@ def report_graph(args, echo=False):
     fig.subplots_adjust(top=0.85)
     num_reports = len(report_data)
     
-    my_colors = ['c','m','y','r', 'g', 'b']*(num_reports/6)
+    my_colors = ['c','m','y','r', 'g', 'b']
     
     for key in report_data.iterkeys():
         report_data[key] = report_data[key]/60.0
