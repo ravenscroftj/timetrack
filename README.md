@@ -124,7 +124,7 @@ respectively.
 An example call and output can be seen below:
 
 ````
-> timetrack report -w  
+$ timetrack report -w  
 
 Project Breakdown: 2016-11-16 to 2016-11-23
 ----------
@@ -132,6 +132,13 @@ PhD: 4h15m
 timetrack: 3h4m
 spam_eating: 1h15m
 ````
+
+### Graphical per-project report
+
+This view is much like above, but outputs a MatPlotLib bar or pie chart of the time spent
+on each project. You can see this summary for the current week or month by using `-w` or
+`-m` flags respectively, and can see a pie chart instead of the default bar graph with the
+`-p` flag.
 
 ### Removing erroneous records
 
