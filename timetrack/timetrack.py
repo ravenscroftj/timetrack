@@ -3,9 +3,11 @@ import sys
 import time
 import argparse
 import configparser
+import numpy
 from datetime import date, datetime, timedelta
 from collections import defaultdict
 from progressbar import ProgressBar, Timer
+from matplotlib import pyplot
 
 track_file = os.path.expanduser("~/.timetrack_log")
 working_hours = 10
@@ -250,7 +252,15 @@ def report(args, echo=True):
     start_date, end_date = parse_time_args(args)
     project_report(start_date, end_date, echo)
 
-
+def report_graph(args):
+    """Generate a bar chart report for the given timeframe."""
+    start_date, end_date = parse_time_args(args)
+    report_data = project_report(start_date, end_date, False)
+    
+    pyplot.bar(range(len(report_data)), report_data.values(), align='center')
+    pyplot.xticks(range(len(report_data)), list(reportdata.keys()))
+    
+    pyplot.show
 
 def main():
     """Main method parses arguments and runs subroutines."""
