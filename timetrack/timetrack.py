@@ -273,7 +273,7 @@ def report_graph(args, echo=False):
     my_colors = ['c','m','y','r', 'g', 'b']*(num_reports/6)
     
     for key in report_data.iterkeys():
-        report_data[key] = report_data[key]/60
+        report_data[key] = report_data[key]/60.0
         
     if args.pie:
         pyplot.axis('equal')
