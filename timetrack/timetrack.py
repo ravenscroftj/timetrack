@@ -269,7 +269,7 @@ def report_graph(args):
     ax.set_ylabel('Hours')
     
     for key in report_data.iterkeys():
-        reportdata[key] = reportdata[key]/60
+        report_data[key] = report_data[key]/60
     
     pyplot.bar(range(len(report_data)), report_data.values(), align='center')
     pyplot.xticks(range(len(report_data)), list(report_data.keys()))
