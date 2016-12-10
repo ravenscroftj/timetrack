@@ -168,6 +168,8 @@ timetrack remove <id>
 The entry will be wiped from the system and the current day's logs will be shown
 on screen.
 
+NB: you can use `timetrack rm` as an alias for remove (to save keystrokes).
+
 ## License
 This project is under the MIT open source license. Please see the LICENSE file
 for the specifics.
