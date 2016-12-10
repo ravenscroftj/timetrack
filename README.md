@@ -140,6 +140,21 @@ on each project. You can see this summary for the current week or month by using
 `-m` flags respectively, and can see a pie chart instead of the default bar graph with the
 `-p` flag.
 
+### Updating existing records
+
+If you have recorded some time for a project, had to walk away and want to go
+back to it (rather than create a new separate record), you can simply append
+more time to it.You will notice that in the `timetrack ls` output each log
+has a number next to it. This is the unique id of that entry. To add more time
+to an entry simply run
+
+````
+timetrack append <id> <time>
+````
+Where id is the unique id of the entry and time is the amount of time to be
+added. `live` is also accepted in append so you can continue to live time your
+work.
+
 ### Removing erroneous records
 
 If you have recorded some time that was incorrect, it is simple enough to remove.

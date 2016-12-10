@@ -57,6 +57,60 @@ def delete(args):
     list_logs(args)
 
 
+def append(args):
+    """Find an entry, update its time, rewrite file."""
+
+    global track_file
+
+    # identify the line to be updated
+    line = int(args.line) - 1
+
+    all_data = []
+    datestr = None
+
+    # read all the data from the log into memory
+    with open(track_file, "r") as f:
+        for lineno, x in enumerate(f):
+            if lineno != line:
+                all_data.append(x)
+            else:
+                datestr, project, time, comment = x.split("\t")
+
+    # if after reading everything we didn't find the line, return error
+    if datestr is None:
+        print("Could not find entry with ID {}. Giving up.".format(args.line))
+        return
+
+    # run live timer or parse updated time
+    if args.time == "live":
+        print("Started at {}".format(human_time(time)))
+        time_add = int(live_time(args, project=project))
+    else:
+        time_add = parse_time(args.time)
+
+    # check time added was not less than 1 minute
+    if time_add < 1:
+        print("You must spend at least another minute \
+              on this task to update it.")
+        return
+
+    # add updated time to total
+    time = int(time) + time_add
+
+    print("Appending {} minutes to entry {} ({})".format(time, args.line,
+                                                         project))
+
+    # inject line into data
+    entry = "{}\t{}\t{}\t{}".format(datestr, project, time, comment)
+
+    all_data.insert(line, entry)
+
+    # write data to file
+    with open(track_file, "w") as f:
+        for line in all_data:
+            f.write(line)
+
+
 def add(args):
     """Add a chunk of time to the report."""
     global track_file
@@ -97,7 +151,7 @@ def parse_time(time):
         time = time.replace('h', ':')
 
     if time.find(':') != -1:
-        hours,minutes = time.split(':')
+        hours, minutes = time.split(':')
 
         if minutes.strip() == "":
             minutes = 0
@@ -111,7 +165,7 @@ def parse_time(time):
     return total
 
 
-def live_time(args):
+def live_time(args, project=None, time_passed=None):
     """Run a timer actively in the window"""
     start = datetime.now()
 
@@ -119,7 +173,10 @@ def live_time(args):
 
     running = True
 
-    widgets = ['Project:{} '.format(args.project), Timer(), '']
+    if project is None:
+        project = args.project
+
+    widgets = ['Project:{} '.format(project), Timer(), '']
 
     with ProgressBar(widgets=widgets) as pbar:
         while(running):
@@ -228,7 +285,7 @@ def list_logs(args):
         human_time(day_remainder(records[date.today()]))))
 
 def parse_time_args(args):
-    """"Parses week or month args or uses today by default."""
+    """"Parse week or month args or uses today by default."""
     if args.week:
         end = datetime.now()
         delta = timedelta(days=7)
@@ -256,25 +313,25 @@ def report(args, echo=True):
 def report_graph(args, echo=False):
     """Generate a bar chart report for the given timeframe."""
     start_date, end_date = parse_time_args(args)
-    report_data = OrderedDict(sorted(project_report(start_date, end_date, echo).iteritems()))
-    
+    report_data = OrderedDict(sorted(project_report(start_date, end_date, echo).items()))
+
     fig = pyplot.figure()
     titleString = "Project Breakdown: {}".format(start_date.strftime("%Y-%m-%d"))
-    
+
     if start_date != end_date:
         titleString+=" to {}".format(end_date.strftime("%Y-%m-%d"))
-        
+
     fig.suptitle(titleString, fontsize=14, fontweight='bold')
-            
+
     ax = fig.add_subplot(1,1,1)
     fig.subplots_adjust(top=0.85)
     num_reports = len(report_data)
-    
+
     my_colors = ['c','m','y','r', 'g', 'b']
-    
-    for key in report_data.iterkeys():
+
+    for key in report_data.keys():
         report_data[key] = report_data[key]/60.0
-        
+
     if args.pie:
         pyplot.axis('equal')
         pyplot.pie(report_data.values(), labels=list(report_data.keys()), autopct='%1.1f%%', colors=my_colors, startangle=90)
@@ -283,15 +340,15 @@ def report_graph(args, echo=False):
         ax.set_ylabel('Hours')
         pyplot.bar(range(num_reports), report_data.values(), align='center', color=my_colors)
         pyplot.xticks(range(num_reports), list(report_data.keys()))
-    
+
     pyplot.show()
 
 def main():
     """Main method parses arguments and runs subroutines."""
-    #first thing we do is load/init config
+    # first thing we do is load/init config
     load_config()
 
-    #prepare argparser
+    # prepare argparser
     top_argparser = argparse.ArgumentParser(
         description="Track what you're doing")
 
@@ -300,12 +357,14 @@ def main():
                                         "track",
                                         "report",
                                         "report_graph",
+                                        "rm",
+                                        "append",
                                         "remove",
                                         "add"])
 
     top_args = top_argparser.parse_args(sys.argv[1:2])
 
-    #each action has their own sub-args
+    # each action has their own sub-args
     if top_args.action == "add":
 
         add_argparse = argparse.ArgumentParser(description="Add some time")
@@ -323,6 +382,19 @@ def main():
         args = add_argparse.parse_args(sys.argv[2:])
         add(args)
 
+    if top_args.action == "append":
+
+            update_argparse = argparse.ArgumentParser(
+                description="Update a TT \entry by adding some time")
+            update_argparse.add_argument("line",
+                                         help="ID of time entry to append to")
+            update_argparse.add_argument("time",
+                                         help="Time to budget or 'live' for \
+                                         live timer")
+
+            args = update_argparse.parse_args(sys.argv[2:])
+            append(args)
+
     if top_args.action == "report":
         rpt_argparse = argparse.ArgumentParser(description="Generate report")
         rpt_argparse.add_argument("-w", "--week", dest="week",
@@ -336,7 +408,7 @@ def main():
         args = rpt_argparse.parse_args(sys.argv[2:])
 
         report(args)
-        
+
     if top_args.action == "report_graph":
         rpt_argparse = argparse.ArgumentParser(description="Generate graphical report")
         rpt_argparse.add_argument("-w", "--week", dest="week",
@@ -346,7 +418,7 @@ def main():
         rpt_argparse.add_argument("-m", "--month", dest="month",
                                   action="store_true",
                                   help="List logs for this month")
-                                  
+
         rpt_argparse.add_argument("-p", "--pie", dest="pie",
                                   action="store_true",
                                   help="Display a pie cart instead of a bar chart")
@@ -368,7 +440,7 @@ def main():
 
         list_logs(args)
 
-    if top_args.action == "remove":
+    if top_args.action == "remove" or top_args.action == "rm":
 
         rm_argparse = argparse.ArgumentParser(description="Remove log entry")
         rm_argparse.add_argument("line", help="Entry to remove")
