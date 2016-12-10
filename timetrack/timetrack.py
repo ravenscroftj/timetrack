@@ -97,7 +97,7 @@ def append(args):
     # add updated time to total
     time = int(time) + time_add
 
-    print("Appending {} minutes to entry {} ({})".format(time, args.line,
+    print("Appending {} minutes to entry {} ({})".format(time_add, args.line,
                                                          project))
 
     # inject line into data
