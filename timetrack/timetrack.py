@@ -102,7 +102,7 @@ def append(args):
                                                          record['project']))
 
     # inject line into data
-    entry = json.dumps(record)
+    entry = json.dumps(record) + "\n"
 
     all_data.insert(line, entry)
 
