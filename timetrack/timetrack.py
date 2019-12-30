@@ -4,6 +4,7 @@ import time
 import argparse
 import configparser
 import numpy
+import json
 from datetime import date, datetime, timedelta
 from collections import defaultdict
 from progressbar import ProgressBar, Timer
@@ -66,7 +67,7 @@ def append(args):
     line = int(args.line) - 1
 
     all_data = []
-    datestr = None
+    record = None
 
     # read all the data from the log into memory
     with open(track_file, "r") as f:
@@ -74,17 +75,17 @@ def append(args):
             if lineno != line:
                 all_data.append(x)
             else:
-                datestr, project, time, comment = x.split("\t")
+                record = json.loads(x)
 
     # if after reading everything we didn't find the line, return error
-    if datestr is None:
+    if record is None:
         print("Could not find entry with ID {}. Giving up.".format(args.line))
         return
 
     # run live timer or parse updated time
     if args.time == "live":
-        print("Started at {}".format(human_time(time)))
-        time_add = int(live_time(args, project=project))
+        print("Started at {}".format(human_time(record['time'])))
+        time_add = int(live_time(args, project=record['project']))
     else:
         time_add = parse_time(args.time)
 
@@ -95,13 +96,13 @@ def append(args):
         return
 
     # add updated time to total
-    time = int(time) + time_add
+    record['time'] += time_add
 
     print("Appending {} minutes to entry {} ({})".format(time_add, args.line,
-                                                         project))
+                                                         record['project']))
 
     # inject line into data
-    entry = "{}\t{}\t{}\t{}".format(datestr, project, time, comment)
+    entry = json.dumps(record)
 
     all_data.insert(line, entry)
 
@@ -135,11 +136,8 @@ def add(args):
     print("Adding {} minutes to {} project".format(time, args.project))
 
     with open(track_file, "a") as f:
-        f.write("{}\t{}\t{}\t{}\n".format(
-            day.strftime("%Y-%m-%d"),
-            args.project,
-            time,
-            comment.replace("\t", "").replace("\n", "")))
+        record = {"date": day.strftime("%Y-%m-%d"), "project":args.project, "time": time, "comment":comment }
+        f.write("{}\n".format(json.dumps(record)))
 
 def parse_time(time):
     """Given the time string, parse and turn into normalised minute count"""
@@ -223,12 +221,13 @@ def project_report(start,finish,echo=True):
 
     with open(track_file, "r") as f:
         for lineno, line in enumerate(f):
-            datestr, project, time, comment = line.split("\t")
-            dt = datetime.strptime(datestr, "%Y-%m-%d")
+            record = json.loads(line)
+
+            dt = datetime.strptime(record['date'], "%Y-%m-%d")
             record_date = date(dt.year, dt.month, dt.day)
 
             if record_date >= start and record_date <= finish:
-                projects[project] += int(time)
+                projects[record['project']] += record['time']
 
     if echo:
 
@@ -248,14 +247,15 @@ def report_generate(start, finish, echo=True):
 
     with open(track_file, "r") as f:
         for lineno, line in enumerate(f):
-            datestr, project, time, comment = line.split("\t")
-            dt = datetime.strptime(datestr, "%Y-%m-%d")
+            record = json.loads(line)
+            
+            dt = datetime.strptime(record['date'], "%Y-%m-%d")
             record_date = date(dt.year, dt.month, dt.day)
 
             if record_date >= start and record_date <= finish:
-                day_records[record_date].append((lineno, project,
-                                                 time,
-                                                 comment.strip()))
+                day_records[record_date].append((lineno, record['project'],
+                                                 record['time'],
+                                                 record['comment'].strip()))
 
     if echo:  # only print if echo is on
         for day in sorted(day_records):
