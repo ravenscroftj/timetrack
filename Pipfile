@@ -4,10 +4,14 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
+pylint = "*"
 
 [packages]
 matplotlib = "*"
 progressbar2 = "*"
+timetrack = {editable = true,path = "."}
+python-telegram-bot = "*"
+click = "*"
 
 [requires]
 python_version = "3.6"
