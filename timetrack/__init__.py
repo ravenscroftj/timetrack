@@ -42,6 +42,10 @@ class TTBaseDriver(ABC):
     @abstractmethod
     def get_projects(self):
         """Return known project list"""
+        
+    @abstractmethod
+    def get_tasks(self, project=None):
+        """Return task types from projects"""
 
 
 class TTFileDriver(TTBaseDriver):
@@ -49,7 +53,7 @@ class TTFileDriver(TTBaseDriver):
     def __init__(self, path):
         self.track_file = path
 
-    def add_entry(self, project, time, comment, when=None):
+    def add_entry(self, project, time, comment, when=None, task=None):
         """add new entry to file"""
 
         time = parse_time(time)
@@ -68,6 +72,10 @@ class TTFileDriver(TTBaseDriver):
 
         with open(self.track_file, "a") as f:
             record = {"date": day.strftime("%Y-%m-%d"), "project":project, "time": time, "comment":comment }
+            
+            if task is not None:
+                record['task'] = task
+            
             f.write("{}\n".format(json.dumps(record)))
 
     def delete_entry(self, entry_id):
@@ -100,7 +108,7 @@ class TTFileDriver(TTBaseDriver):
         record = None
 
         # read all the data from the log into memory
-        with open(track_file, "r") as f:
+        with open(self.track_file, "r") as f:
             for lineno, x in enumerate(f):
                 if lineno != line:
                     all_data.append(x)
@@ -137,7 +145,7 @@ class TTFileDriver(TTBaseDriver):
             for line in all_data:
                 f.write(line)
 
-    def get_filtered_entries(self, start=None, finish=None, project=None):
+    def get_filtered_entries(self, start=None, finish=None, project=None, task=None):
 
         with open(self.track_file, "r") as f:
             for lineno, line in enumerate(f):
@@ -154,6 +162,9 @@ class TTFileDriver(TTBaseDriver):
 
                 if project != None and record['project'] != project:
                     continue
+                
+                if task != None and record.get('task') != task:
+                    continue
 
                 #add record ID which is just the line number +1
                 record['id'] = lineno + 1
@@ -165,11 +176,24 @@ class TTFileDriver(TTBaseDriver):
         projects = set()
         
         with open(self.track_file, "r") as f:
-            for lineno, line in enumerate(f):
+            for line in f:
                 record = json.loads(line)
                 projects.add(record['project'])
         
         return projects
+
+    def get_tasks(self, project=None):
+        
+        tasks = set()
+        
+        with open(self.track_file, "r") as f:
+            for line in f:
+                record = json.loads(line)
+                if 'task' in record and (project is None or record['project'] == project):
+                    tasks.add(record.get('task'))
+            
+        return tasks
+                    
 
 
 
@@ -192,41 +216,6 @@ def load_config():
 
     return config
 
-
-    
-
-
-
-
-
-
-def add(args):
-    """Add a chunk of time to the report."""
-    global track_file
-    
-
-    if args.time == "live":
-        time = int(live_time(args))
-    else:
-        time = parse_time(args.time)
-
-    if time < 1:
-        print("You must spend at least a minute on a task to record it.")
-        return
-
-    if(args.when == "now"):
-        day = date.today()
-    else:
-        dt = datetime.strptime(args.when, "%Y-%m-%d")
-        day = date(dt.year, dt.month, dt.day)
-
-    comment = ' '.join(args.comment)
-
-    print("Adding {} minutes to {} project".format(time, args.project))
-
-    with open(track_file, "a") as f:
-        record = {"date": day.strftime("%Y-%m-%d"), "project":args.project, "time": time, "comment":comment }
-        f.write("{}\n".format(json.dumps(record)))
 
 def parse_time(time):
     """Given the time string, parse and turn into normalised minute count"""
@@ -256,8 +245,6 @@ def parse_time(time):
 
 
 
-
-
 def human_time(minutes):
     """Returns x hours y minutes for an input of minutes"""
 
@@ -279,224 +266,3 @@ def day_remainder(records, working_hours=10):
     total_spent = day_spent(records)
 
     return day_minutes - total_spent
-
-
-def project_report(start,finish,echo=True):
-    """Summarise total time spent per project instead of per day"""
-    projects = defaultdict(lambda: 0)
-
-    with open(track_file, "r") as f:
-        for lineno, line in enumerate(f):
-            record = json.loads(line)
-
-            dt = datetime.strptime(record['date'], "%Y-%m-%d")
-            record_date = date(dt.year, dt.month, dt.day)
-
-            if record_date >= start and record_date <= finish:
-                projects[record['project']] += record['time']
-
-    if echo:
-
-        print("\nProject Breakdown: {} to {} \n----------".format(
-            start.strftime("%Y-%m-%d"),
-            finish.strftime("%Y-%m-%d")))
-
-        for project, spent in projects.items():
-            print("{}: {}".format(project, human_time(spent)))
-
-    return projects
-
-
-
-
-
-def list_logs(args):
-    """Show tasks recorded and time remaining today."""
-    start_date, end_date = parse_time_args(args)
-
-    records = report_generate(start_date, end_date)
-
-    print("-----------")
-
-    print("Time spent today: {}".format(
-        human_time(day_spent(records[date.today()]))))
-    print("Remaining time today: {}".format(
-        human_time(day_remainder(records[date.today()]))))
-
-def parse_time_args(args):
-    """"Parse week or month args or uses today by default."""
-    if args.week:
-        end = datetime.now()
-        delta = timedelta(days=7)
-        start = end - delta
-        start_date = date(start.year, start.month, start.day)
-        end_date = date(end.year, end.month, end.day)
-    elif args.month:
-        end = datetime.now()
-        delta = timedelta(days=30)
-        start = end - delta
-        start_date = date(start.year, start.month, start.day)
-        end_date = date(end.year, end.month, end.day)
-    else:
-        start_date = date.today()
-        end_date = date.today()
-
-    return start_date, end_date
-
-
-def report(args, echo=True):
-    """Generate a report for the given timeframe."""
-    start_date, end_date = parse_time_args(args)
-    project_report(start_date, end_date, echo)
-
-def report_graph(args, echo=False):
-    """Generate a bar chart report for the given timeframe."""
-    start_date, end_date = parse_time_args(args)
-    report_data = OrderedDict(sorted(project_report(start_date, end_date, echo).items()))
-
-    fig = pyplot.figure()
-    titleString = "Project Breakdown: {}".format(start_date.strftime("%Y-%m-%d"))
-
-    if start_date != end_date:
-        titleString+=" to {}".format(end_date.strftime("%Y-%m-%d"))
-
-    fig.suptitle(titleString, fontsize=14, fontweight='bold')
-
-    ax = fig.add_subplot(1,1,1)
-    fig.subplots_adjust(top=0.85)
-    num_reports = len(report_data)
-
-    my_colors = ['c','m','y','r', 'g', 'b']
-
-    for key in report_data.keys():
-        report_data[key] = report_data[key]/60.0
-
-    if args.pie:
-        pyplot.axis('equal')
-        pyplot.pie(report_data.values(), labels=list(report_data.keys()), autopct='%1.1f%%', colors=my_colors, startangle=90)
-    else:
-        ax.set_xlabel('Project')
-        ax.set_ylabel('Hours')
-        pyplot.bar(range(num_reports), report_data.values(), align='center', color=my_colors)
-        pyplot.xticks(range(num_reports), list(report_data.keys()))
-
-    pyplot.show()
-
-def main():
-    """Main method parses arguments and runs subroutines."""
-    # first thing we do is load/init config
-    load_config()
-
-    # prepare argparser
-    top_argparser = argparse.ArgumentParser(
-        description="Track what you're doing")
-
-    top_argparser.add_argument("action",
-                               choices=["ls",
-                                        "track",
-                                        "report",
-                                        "report_graph",
-                                        "rm",
-                                        "append",
-                                        "remove",
-                                        "add",
-                                        "bot"])
-
-    top_args = top_argparser.parse_args(sys.argv[1:2])
-    
-    if top_args.action == "bot":
-        from timetrack.bot import botmain
-        botmain()
-
-    # each action has their own sub-args
-    if top_args.action == "add":
-
-        add_argparse = argparse.ArgumentParser(description="Add some time")
-        add_argparse.add_argument("project",
-                                  help="Name of project to track")
-        add_argparse.add_argument("time",
-                                  help="Time to budget or 'live' for \
-                                  live timer")
-        add_argparse.add_argument("comment", nargs="+",
-                                  help="What did you do in this time")
-        add_argparse.add_argument("-w", "--when", dest="when", default="now",
-                                  help="When to insert time. \
-                                  Defaults to today")
-
-        args = add_argparse.parse_args(sys.argv[2:])
-        add(args)
-
-    if top_args.action == "append":
-
-            update_argparse = argparse.ArgumentParser(
-                description="Update a TT \entry by adding some time")
-            update_argparse.add_argument("line",
-                                         help="ID of time entry to append to")
-            update_argparse.add_argument("time",
-                                         help="Time to budget or 'live' for \
-                                         live timer")
-
-            args = update_argparse.parse_args(sys.argv[2:])
-            append(args)
-
-    if top_args.action == "report":
-        rpt_argparse = argparse.ArgumentParser(description="Generate report")
-        rpt_argparse.add_argument("-w", "--week", dest="week",
-                                  action="store_true",
-                                  help="List logs for this week")
-
-        rpt_argparse.add_argument("-m", "--month", dest="month",
-                                  action="store_true",
-                                  help="List logs for this month")
-
-        args = rpt_argparse.parse_args(sys.argv[2:])
-
-        report(args)
-
-    if top_args.action == "report_graph":
-        rpt_argparse = argparse.ArgumentParser(description="Generate graphical report")
-        rpt_argparse.add_argument("-w", "--week", dest="week",
-                                  action="store_true",
-                                  help="List logs for this week")
-
-        rpt_argparse.add_argument("-m", "--month", dest="month",
-                                  action="store_true",
-                                  help="List logs for this month")
-
-        rpt_argparse.add_argument("-p", "--pie", dest="pie",
-                                  action="store_true",
-                                  help="Display a pie cart instead of a bar chart")
-
-        args = rpt_argparse.parse_args(sys.argv[2:])
-
-        report_graph(args)
-
-    if top_args.action == "ls":
-        ls_argparse = argparse.ArgumentParser(description="List time logs")
-        ls_argparse.add_argument("-w", "--week", dest="week",
-                                 action="store_true",
-                                 help="List logs for this week")
-        ls_argparse.add_argument("-m", "--month", dest="month",
-                                  action="store_true",
-                                  help="List logs for this month")
-
-        args = ls_argparse.parse_args(sys.argv[2:])
-
-        list_logs(args)
-
-    if top_args.action == "remove" or top_args.action == "rm":
-
-        rm_argparse = argparse.ArgumentParser(description="Remove log entry")
-        rm_argparse.add_argument("line", help="Entry to remove")
-
-        args = rm_argparse.parse_args(sys.argv[2:])
-        delete(args)
-
-
-@click.group()
-def cli():
-    pass
-
-
-if __name__ == "__main__":
-    cli()

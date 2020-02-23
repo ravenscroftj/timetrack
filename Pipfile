@@ -12,6 +12,7 @@ progressbar2 = "*"
 timetrack = {editable = true,path = "."}
 python-telegram-bot = "*"
 click = "*"
+requests = "*"
 
 [requires]
 python_version = "3.6"

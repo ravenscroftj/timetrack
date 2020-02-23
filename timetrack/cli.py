@@ -53,7 +53,12 @@ def report_generate(records, echo=True):
 def init_context_obj():
     obj = {}
     obj['CONFIG'] = load_config()
-    obj['DRIVER'] = TTFileDriver(obj['CONFIG']['timetrack']['track_file'])
+    if obj['CONFIG']['timetrack'].get('driver', 'file') == "harvest":
+        from timetrack.harvest import TTHarvestDriver
+        
+        obj['DRIVER'] = TTHarvestDriver(ACCESS_TOKEN=obj['CONFIG']['harvest']['ACCESS_TOKEN'], ACCOUNT_ID=obj['CONFIG']['harvest']['ACCOUNT_ID'])
+    else:
+        obj['DRIVER'] = TTFileDriver(obj['CONFIG']['timetrack']['track_file'])
     return obj
 
 @click.group()
@@ -72,23 +77,43 @@ def autocomplete_projects(ctx, args, incomplete):
     
     projects = driver.get_projects()
     
-    return [p for p in projects if incomplete in p]
+    options = [p for p in projects if  (len(incomplete) < 1) or (incomplete in p) ]
+    
+    return [f'"{option}"' if " " in option else option for option in options]
+
+def autocomplete_tasks(ctx, args, incomplete):
+    
+    if ctx.obj is None:
+        ctx.obj = init_context_obj()
+    
+    driver = ctx.obj['DRIVER']
+    
+    tasks = driver.get_tasks()
+    
+    #return args
+    options = [t for t in tasks if (len(incomplete) < 1) or (incomplete in t)]
+    return [f'"{option}"' if " " in option else option for option in options]
+
 
 @cli.command()
 @click.pass_context
 @click.argument("project", type=str, autocompletion=autocomplete_projects)
 @click.argument("time", type=str)
-@click.argument("comment", type=str)
-def add(ctx, project, time, comment):
+@click.argument("comment", type=str, nargs=-1)
+@click.option("-t", "--task", type=str, default=None, autocompletion=autocomplete_tasks)
+def add(ctx, project, time, comment, task):
     """Add a time entry to a given project"""
     driver = ctx.obj['DRIVER']
 
     if time == "live":
         time = live_time(project)
+        
+    if len(comment) > 1:
+        comment = " ".join(comment)
 
     print("Adding {} minutes to {} project".format(parse_time(time), project))
     try:
-        driver.add_entry(project, time, comment)
+        driver.add_entry(project, time, comment, task=task)
     except Exception as e:
         print("ERROR:", e)
 
@@ -111,6 +136,22 @@ def parse_time_args(args):
         end_date = date.today()
 
     return start_date, end_date
+
+@cli.command()
+@click.pass_context
+@click.argument("entry", type=str, autocompletion=autocomplete_projects)
+@click.argument("time", type=str)
+def append(ctx, entry, time):
+    """Append an amount of time to timetrack log"""
+    
+    if time == "live":
+        time = live_time(f"Continuing work on entry {entry}")
+        
+        print("Adding {} minutes to entry {}".format(parse_time(time), entry))
+        
+    driver = ctx.obj['DRIVER']
+    
+    driver.update_entry(entry, time)
 
 @cli.command()
 @click.pass_context
@@ -162,6 +203,17 @@ def ls_prj(ctx):
     
     for project in driver.get_projects():
         print(project)
+        
+
+@cli.command()
+@click.pass_context
+@click.option("-p", "--project", type=str, default=None)
+def ls_tasks(ctx, project):
+    """List task types"""
+    driver = ctx.obj['DRIVER']
+    
+    for task in driver.get_tasks(project):
+        print(task)
 
 @cli.command()
 @click.pass_context

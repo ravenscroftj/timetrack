@@ -2,15 +2,17 @@ from setuptools import setup, find_packages
 
 setup(
     name = "timetrack",
-    version = 0.1,
+    version = "1.0a",
     packages = find_packages(),
 
     #install requirements
     install_requires = ['progressbar2',
-                        'matplotlib'],
-
+                        'matplotlib',
+                        'Click'],
+    include_package_data=True,
+    
     entry_points = {"console_scripts" : [
-        'timetrack = timetrack.timetrack:main',
+        'timetrack = timetrack.cli:cli',
         ]},
 
     author="James Ravenscroft",
