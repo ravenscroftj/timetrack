@@ -14,6 +14,7 @@ from progressbar import ProgressBar, Timer
 from matplotlib import pyplot
 from collections import OrderedDict
 from typing import Optional, Union, List
+from configparser import ConfigParser
 
 track_file = os.path.expanduser("~/.timetrack_log")
 
@@ -46,12 +47,18 @@ class TTBaseDriver(ABC):
     @abstractmethod
     def get_tasks(self, project=None):
         """Return task types from projects"""
-
+        
+class TTFileDriverException(Exception):
+    """Exception raised by file driver"""
 
 class TTFileDriver(TTBaseDriver):
 
-    def __init__(self, path):
-        self.track_file = path
+    def __init__(self, config: ConfigParser, rootsection: Optional[str] = "timetrack"):
+        
+        self.track_file = config.get(rootsection, "track_file")
+        
+        if self.track_file is None:
+            raise TTFileDriverException
 
     def add_entry(self, project, time, comment, when=None, task=None):
         """add new entry to file"""
@@ -63,6 +70,8 @@ class TTFileDriver(TTBaseDriver):
 
         if(when == None):
             day = date.today()
+        elif type(when) is datetime:
+            day = when.date()
         else:
             dt = datetime.strptime(when, "%Y-%m-%d")
             day = date(dt.year, dt.month, dt.day)
@@ -201,9 +210,11 @@ def load_config():
     """Load config variables for timetrack"""
 
     config = configparser.ConfigParser()
-    config['timetrack'] = {"track_file": os.path.expanduser(
-                                            "~/.timetrack_log"),
-                        "working_hours": 10}
+    config['timetrack'] = {"working_hours": 10}
+    config['driver'] = {
+        "type":"file",
+        "track_file": os.path.expanduser("~/.timetrack_log")
+    }
 
     confpath = os.path.expanduser("~/.timetrack")
 

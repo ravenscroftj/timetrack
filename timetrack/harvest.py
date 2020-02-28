@@ -1,17 +1,30 @@
 import requests
 
 from datetime import datetime
-from timetrack import TTBaseDriver
+from timetrack import TTBaseDriver, parse_time
+from configparser import ConfigParser
+from typing import Optional
 
 USER_AGENT = "timetrack 1.0"
 HARVEST_ENDPOINT = "https://api.harvestapp.com/v2"
 
+class TTHarvestDriverException(Exception):
+    """Exceptions raised by timetrack harvst driver"""
+
 class TTHarvestDriver(TTBaseDriver):
     
-
-    
-    def __init__(self, ACCESS_TOKEN, ACCOUNT_ID):
+    def __init__(self, config: ConfigParser, rootsection: Optional[str] = "harvest"):
         """Create harvest driver"""
+        
+        ACCESS_TOKEN=config.get(rootsection, 'ACCESS_TOKEN')
+        ACCOUNT_ID=config.get(rootsection, 'ACCOUNT_ID')
+        
+        if ACCESS_TOKEN is None:
+            raise TTHarvestDriverException("You must supply an access token")
+        
+        if ACCOUNT_ID is None:
+            raise TTHarvestDriverException("You must supply an ACCOUNT_ID")            
+        
         self.access_token = ACCESS_TOKEN
         self.account_id = ACCOUNT_ID
         self._user_profile = None
@@ -47,10 +60,50 @@ class TTHarvestDriver(TTBaseDriver):
     def add_entry(self, project, time, comment, when=datetime.now(), task=None):
         projbits = project.split("/")
         
+        time = parse_time(time)
+        
+        if task is None:
+            raise Exception("Harvest requires a task, please provide valid task (use timetrack ls-tasks)")
+        
         if len(projbits) < 2: #expect ProjectCode or Projectcode/ProjectName
             project_id = projbits[0]
         else: #expect Client/ProjectCode/ProjectName
             project_id = projbits[1]
+            
+        # get user project assignments
+        project_map = self.get_project_map()
+        
+        if project_id not in project_map:
+            raise Exception(f"Unknown project {project}. Expecting either ProjectCode or ProjectCode/ProjectName or Client/ProjectCode/ProjectName")
+
+        proj = project_map[project_id]
+        
+        #check task assignments
+        task_id = None
+        for ta in proj['task_assignments']:
+            if task == ta['task']['name']:
+                task_id = ta['task']['id']
+                
+        if task_id is None:
+            raise Exception(f"Invalid task {task} on project {project} - double check that this task is associated with this project!")
+        
+        time_entry = {
+            "user_id": self._user_profile['id'],
+            "project_id": proj['project']['id'],
+            "task_id": task_id,
+            "spent_date": when.strftime("%Y-%m-%d"),
+            "hours": time / 60, # convert from timetrack time (minutes) to hours
+            "notes": comment
+        }
+        
+        
+        r = self.request(requests.post, "/time_entries", json=time_entry)
+        
+        return r.status_code == 201
+            
+        
+        
+            
             
             
     

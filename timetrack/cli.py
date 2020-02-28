@@ -1,5 +1,6 @@
 import click
 import time
+import traceback
 from datetime import datetime, date, timedelta
 from collections import defaultdict
 from timetrack import TTFileDriver, load_config, human_time, day_remainder, day_spent, parse_time
@@ -56,9 +57,13 @@ def init_context_obj():
     if obj['CONFIG']['timetrack'].get('driver', 'file') == "harvest":
         from timetrack.harvest import TTHarvestDriver
         
-        obj['DRIVER'] = TTHarvestDriver(ACCESS_TOKEN=obj['CONFIG']['harvest']['ACCESS_TOKEN'], ACCOUNT_ID=obj['CONFIG']['harvest']['ACCOUNT_ID'])
+        obj['DRIVER'] = TTHarvestDriver(obj['CONFIG'])
+    elif obj['CONFIG']['timetrack'].get('driver', 'file') == "router":
+        from timetrack.router import TTRouterDriver
+        
+        obj['DRIVER'] = TTRouterDriver(obj['CONFIG'])
     else:
-        obj['DRIVER'] = TTFileDriver(obj['CONFIG']['timetrack']['track_file'])
+        obj['DRIVER'] = TTFileDriver(obj['CONFIG'])
     return obj
 
 @click.group()
@@ -108,14 +113,14 @@ def add(ctx, project, time, comment, task):
     if time == "live":
         time = live_time(project)
         
-    if len(comment) > 1:
-        comment = " ".join(comment)
+    comment = " ".join(comment)
 
     print("Adding {} minutes to {} project".format(parse_time(time), project))
     try:
         driver.add_entry(project, time, comment, task=task)
     except Exception as e:
         print("ERROR:", e)
+        traceback.print_exc()
 
 def parse_time_args(args):
     """"Parse week or month args or uses today by default."""
@@ -300,7 +305,7 @@ def report(ctx, week, month, graph, graph_type):
             ax.set_xlabel('Project')
             ax.set_ylabel('Hours')
             pyplot.bar(range(num_reports), projects.values(), align='center', color=my_colors)
-            pyplot.xticks(range(num_reports), list(projects.keys()))
+            pyplot.xticks(range(num_reports), list(projects.keys()), rotation=90)
 
     pyplot.show()
 
