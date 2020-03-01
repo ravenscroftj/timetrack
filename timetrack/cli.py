@@ -1,6 +1,7 @@
 import click
 import time
 import traceback
+import moment
 from datetime import datetime, date, timedelta
 from collections import defaultdict
 from timetrack import TTFileDriver, load_config, human_time, day_remainder, day_spent, parse_time
@@ -105,8 +106,9 @@ def autocomplete_tasks(ctx, args, incomplete):
 @click.argument("project", type=str, autocompletion=autocomplete_projects)
 @click.argument("time", type=str)
 @click.argument("comment", type=str, nargs=-1)
+@click.option("-d", "--date")
 @click.option("-t", "--task", type=str, default=None, autocompletion=autocomplete_tasks)
-def add(ctx, project, time, comment, task):
+def add(ctx, project, time, comment, date, task):
     """Add a time entry to a given project"""
     driver = ctx.obj['DRIVER']
 
@@ -114,10 +116,16 @@ def add(ctx, project, time, comment, task):
         time = live_time(project)
         
     comment = " ".join(comment)
+    
+    if date is None:
+        when = datetime.now()
+        
+    else:
+        when = moment.date(date).datetime
 
     print("Adding {} minutes to {} project".format(parse_time(time), project))
     try:
-        driver.add_entry(project, time, comment, task=task)
+        driver.add_entry(project, time, comment, when=when, task=task)
     except Exception as e:
         print("ERROR:", e)
         traceback.print_exc()
@@ -304,8 +312,8 @@ def report(ctx, week, month, graph, graph_type):
         else:
             ax.set_xlabel('Project')
             ax.set_ylabel('Hours')
-            pyplot.bar(range(num_reports), projects.values(), align='center', color=my_colors)
-            pyplot.xticks(range(num_reports), list(projects.keys()), rotation=90)
+            pyplot.barh(range(num_reports), projects.values(), align='center', color=my_colors)
+            pyplot.yticks(range(num_reports), list(projects.keys()))
 
     pyplot.show()
 

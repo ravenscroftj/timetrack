@@ -91,4 +91,12 @@ class TTRouterDriver(TTBaseDriver):
         return tasks
     
     def update_entry(self, entry_id, time):
-        return super().update_entry(entry_id, time)
+        
+        
+        prefix, task_id = entry_id.split("_", maxsplit=1)
+        
+        if prefix not in self.drivers:
+            raise TTRouterException(f"No driver found with prefix {prefix}.")
+        
+        self.drivers[prefix].update_entry(task_id, time)
+        

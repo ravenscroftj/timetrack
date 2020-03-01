@@ -3,6 +3,8 @@ from telegram.ext import Updater, CommandHandler
 
 def botmain():
     
+    # this key does work - I accidentally committed it and then revoked it
+    # bad luck would-be script kiddies!
     updater = Updater(token='390691367:AAFKlE_3_3nGReOJz4b0nKuHe7qeVQfm3eI', use_context=True)
     dispatcher = updater.dispatcher
     
