@@ -53,7 +53,7 @@ class TTFileDriverException(Exception):
 
 class TTFileDriver(TTBaseDriver):
 
-    def __init__(self, config: ConfigParser, rootsection: Optional[str] = "timetrack"):
+    def __init__(self, config: ConfigParser, rootsection: Optional[str] = "driver"):
         
         self.track_file = config.get(rootsection, "track_file")
         
